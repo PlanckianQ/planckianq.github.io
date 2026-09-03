@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Planckian Hot Desk Booking</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Planckian Office</h1>
+    <div class="tomorrow" id="tomorrowLabel">Loading date…</div>
+  </header>
+
+  <main>
+    <section class="status-row">
+      <span id="statusMsg" class="status-msg"></span>
+      <button id="refreshBtn" class="refresh-btn" title="Refresh bookings">⟳ Refresh</button>
+    </section>
+
+    <section class="room" id="room-A">
+      <h2>Room A <span class="capacity">(4 seats)</span></h2>
+      <div class="desks" id="desks-A"></div>
+    </section>
+
+    <section class="room" id="room-B">
+      <h2>Room B <span class="capacity">(4 seats)</span></h2>
+      <div class="desks" id="desks-B"></div>
+    </section>
+
+    <section class="room extra-room" id="room-X">
+      <h2>Extra Spots <span class="capacity">(overflow · 3 seats)</span></h2>
+      <div class="desks" id="desks-X"></div>
+    </section>
+  </main>
+
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <h3 id="modalTitle">Book desk</h3>
+      <label for="nameInput">Your name</label>
+      <input type="text" id="nameInput" placeholder="e.g. Jane Doe" autocomplete="name" />
+      <label for="whenInput">When</label>
+      <select id="whenInput">
+        <option value="">Select…</option>
+        <option value="Morning">Morning</option>
+        <option value="Afternoon">Afternoon</option>
+        <option value="Whole day">Whole day</option>
+      </select>
+      <div class="modal-actions">
+        <button id="cancelBtn" class="btn secondary">Cancel</button>
+        <button id="confirmBtn" class="btn primary">Book it</button>
+      </div>
+      <p class="modal-error" id="modalError"></p>
+    </div>
+  </div>
+
+  <footer>
+    <p>Bookings are for <strong>tomorrow</strong> only. Data is stored in a shared Google Sheet — it may take a
+      minute to appear for other people. See <code>README.md</code> for setup.</p>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
