@@ -9,7 +9,10 @@
 <body>
   <header class="topbar">
     <h1>Planckian Office</h1>
-    <div class="tomorrow" id="tomorrowLabel">Loading date…</div>
+    <div class="date-picker">
+      <label for="targetDateSelect">Booking for</label>
+      <select id="targetDateSelect"></select>
+    </div>
   </header>
 
   <main>
@@ -55,8 +58,9 @@
   </div>
 
   <footer>
-    <p>Bookings are for <strong>tomorrow</strong> only. Data is stored in a shared Google Sheet — it may take a
-      minute to appear for other people. See <code>README.md</code> for setup.</p>
+    <p>Choose <strong>day after</strong> or <strong>day after tomorrow</strong> above (weekends are
+      skipped — from Friday, both options land on Monday/Tuesday). Data is stored in a shared Google
+      Sheet — it may take a minute to appear for other people. See <code>README.md</code> for setup.</p>
   </footer>
 
   <script src="js/config.js"></script>

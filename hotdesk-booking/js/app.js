@@ -49,10 +49,27 @@ function formRoomForDesk(deskId) {
 
 const PENDING_KEY = "hotdesk_pending_bookings_v1";
 
-function tomorrowDate() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
+// Add n business days to `base`, skipping Saturday/Sunday entirely — so from
+// a Friday, +1 lands on Monday and +2 lands on Tuesday.
+function addBusinessDays(base, n) {
+  const d = new Date(base);
+  let added = 0;
+  while (added < n) {
+    d.setDate(d.getDate() + 1);
+    const day = d.getDay(); // 0 = Sunday, 6 = Saturday
+    if (day !== 0 && day !== 6) added++;
+  }
   return d;
+}
+
+// The two selectable booking targets: "day after" and "day after tomorrow",
+// both business-day-aware (weekends skipped).
+function targetDateOptions() {
+  const today = new Date();
+  return [
+    { label: "day after", date: addBusinessDays(today, 1) },
+    { label: "day after tomorrow", date: addBusinessDays(today, 2) },
+  ];
 }
 
 function isoDate(d) {
@@ -60,6 +77,13 @@ function isoDate(d) {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+// Reverse of isoDate() — built from local Y/M/D components so it doesn't
+// shift a day when the browser is behind UTC (unlike `new Date(isoString)`).
+function parseIsoLocal(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  return new Date(y, m - 1, d);
 }
 
 function friendlyDate(d) {
@@ -83,7 +107,7 @@ function dateFieldsForEntry(entryId, dateObj) {
 
 // The Sheet renders that native Date answer back as locale-formatted text
 // (e.g. "4/9/2026") rather than ISO, so parse it defensively rather than
-// comparing strings directly against our own ISO "tomorrow" value.
+// comparing strings directly against our own ISO booking-date value.
 function parseSheetDateToIso(raw) {
   if (!raw) return null;
   const s = String(raw).trim();
@@ -300,7 +324,8 @@ let activeDesk = null;
 
 function openModal(deskId, deskLabel) {
   activeDesk = deskId;
-  document.getElementById("modalTitle").textContent = `Book ${deskLabel}`;
+  const forDateObj = parseIsoLocal(getSelectedDateIso());
+  document.getElementById("modalTitle").textContent = `Book ${deskLabel} — ${friendlyDate(forDateObj)}`;
   document.getElementById("nameInput").value = "";
   document.getElementById("whenInput").value = "";
   document.getElementById("modalError").textContent = "";
@@ -321,8 +346,8 @@ async function confirmBooking() {
   if (!name) { errEl.textContent = "Please enter your name."; return; }
   if (!when) { errEl.textContent = "Please select Morning, Afternoon or Whole day."; return; }
 
-  const forDateObj = tomorrowDate();
-  const forDate = isoDate(forDateObj);
+  const forDate = getSelectedDateIso();
+  const forDateObj = parseIsoLocal(forDate);
   const confirmBtn = document.getElementById("confirmBtn");
   confirmBtn.disabled = true;
   confirmBtn.textContent = "Booking…";
@@ -351,9 +376,38 @@ function setStatus(msg) {
   document.getElementById("statusMsg").textContent = msg;
 }
 
+// ---- date picker (day after / day after tomorrow) --------------------------
+// Repopulates the <select>, keeping whatever the visitor currently has
+// picked if it's still one of the two valid options (it will be, in almost
+// all cases — options only shift at midnight).
+function populateDateSelect() {
+  const sel = document.getElementById("targetDateSelect");
+  const prevValue = sel.value;
+  const options = targetDateOptions();
+
+  sel.innerHTML = "";
+  for (const opt of options) {
+    const iso = isoDate(opt.date);
+    const el = document.createElement("option");
+    el.value = iso;
+    el.textContent = `${friendlyDate(opt.date)} (${opt.label})`;
+    sel.appendChild(el);
+  }
+
+  const stillValid = Array.from(sel.options).some((o) => o.value === prevValue);
+  sel.value = stillValid ? prevValue : sel.options[0].value;
+}
+
+function getSelectedDateIso() {
+  const sel = document.getElementById("targetDateSelect");
+  if (!sel.value) populateDateSelect();
+  return sel.value;
+}
+
 // ---- main refresh loop ------------------------------------------------------
 async function refresh() {
-  const forDate = isoDate(tomorrowDate());
+  populateDateSelect(); // keep options current (e.g. across a midnight rollover)
+  const forDate = getSelectedDateIso();
   setStatus("Loading bookings…");
   try {
     const rows = await fetchBookings();
@@ -368,8 +422,8 @@ async function refresh() {
 }
 
 function init() {
-  const tmr = tomorrowDate();
-  document.getElementById("tomorrowLabel").textContent = "Booking for: " + friendlyDate(tmr);
+  populateDateSelect();
+  document.getElementById("targetDateSelect").addEventListener("change", refresh);
 
   document.getElementById("refreshBtn").addEventListener("click", refresh);
   document.getElementById("cancelBtn").addEventListener("click", closeModal);

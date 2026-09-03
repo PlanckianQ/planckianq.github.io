@@ -28,10 +28,24 @@ body {
   text-align: center;
 }
 .topbar h1 { margin: 0 0 4px; font-size: 1.5rem; }
-.tomorrow {
+.date-picker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   font-size: 1.05rem;
   color: var(--muted);
   font-weight: 600;
+  flex-wrap: wrap;
+}
+.date-picker select {
+  font: inherit;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 4px 8px;
 }
 
 main {
