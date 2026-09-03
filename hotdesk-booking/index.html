@@ -42,13 +42,16 @@
       <h3 id="modalTitle">Book desk</h3>
       <label for="nameInput">Your name</label>
       <input type="text" id="nameInput" placeholder="e.g. Jane Doe" autocomplete="name" />
-      <label for="whenInput">When</label>
-      <select id="whenInput">
-        <option value="">Select…</option>
-        <option value="Morning">Morning</option>
-        <option value="Afternoon">Afternoon</option>
-        <option value="Whole day">Whole day</option>
-      </select>
+      <div id="whenField">
+        <label for="whenInput">When</label>
+        <select id="whenInput">
+          <option value="">Select…</option>
+          <option value="Morning">Morning</option>
+          <option value="Afternoon">Afternoon</option>
+          <option value="Whole day">Whole day</option>
+        </select>
+      </div>
+      <p id="whenPreset" class="when-preset" hidden></p>
       <div class="modal-actions">
         <button id="cancelBtn" class="btn secondary">Cancel</button>
         <button id="confirmBtn" class="btn primary">Book it</button>

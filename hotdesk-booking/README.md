@@ -65,6 +65,12 @@ person).
 - **Alessio's desk (Room A, Desk 1)** is hard-coded in `js/app.js` — it never
   reads from the sheet and can't be booked through the UI. Edit the
   `fixedOccupant` field there if this ever changes.
+- **Half-day splitting.** If a desk is booked for only "Morning" or only
+  "Afternoon", its card splits in two — the booked half shows the occupant,
+  the free half gets its own small "Book" button that locks straight to that
+  half (no Morning/Afternoon/Whole day choice needed, since only one option
+  is actually free). A "Whole day" booking always occupies both halves, same
+  as before splitting existed.
 - **Update lag:** Google's "Publish to web" CSV can take up to a minute or two
   to reflect a brand-new form response for *other* visitors. The person who
   just booked sees their own booking immediately (optimistic local state);

@@ -218,6 +218,34 @@ async function fetchBookings() {
 }
 
 // ---- rendering -------------------------------------------------------------
+
+// Who (if anyone) holds a given When-slot for a desk: a confirmed Sheet row
+// wins over a merely-pending local one; null means that slot is free.
+function slotOccupant(deskRows, deskPending, slotName) {
+  const real = deskRows.find((r) => r.When === slotName);
+  if (real) return { name: real.Name, pending: false };
+  const pend = deskPending.find((p) => p.when === slotName);
+  if (pend) return { name: pend.name, pending: true };
+  return null;
+}
+
+function renderHalf(desk, slotName, occupant) {
+  if (occupant) {
+    return `
+      <div class="half booked${occupant.pending ? " pending" : ""}">
+        <span class="half-name">${slotName}${occupant.pending ? " · booking…" : ""}</span>
+        <span class="who">${escapeHtml(occupant.name)}</span>
+      </div>
+    `;
+  }
+  return `
+    <div class="half free">
+      <span class="half-name">${slotName} · free</span>
+      <button class="mini-book-btn" data-desk="${desk.id}" data-label="${desk.label}" data-slot="${slotName}">Book</button>
+    </div>
+  `;
+}
+
 function render(rows, forDate) {
   const pending = loadPending().filter((p) => p.date === forDate);
 
@@ -239,35 +267,41 @@ function render(rows, forDate) {
         continue;
       }
 
-      const match = rows.find((r) => r.Desk === desk.id && sameDate(r.Date, forDate));
-      const pendingMatch = !match && pending.find((p) => p.desk === desk.id);
+      const deskRows = rows.filter((r) => r.Desk === desk.id && sameDate(r.Date, forDate));
+      const deskPending = pending.filter((p) => p.desk === desk.id);
 
-      if (match) {
+      const wholeDay = slotOccupant(deskRows, deskPending, "Whole day");
+      const morning = slotOccupant(deskRows, deskPending, "Morning");
+      const afternoon = slotOccupant(deskRows, deskPending, "Afternoon");
+
+      if (wholeDay) {
+        // A whole-day booking (confirmed or pending) occupies both halves —
+        // show one solid booked card, same as before half-splitting existed.
         card.classList.add("booked");
+        if (wholeDay.pending) card.classList.add("pending");
         card.innerHTML = `
           <span class="desk-label">${desk.label}</span>
-          <span class="pill booked">Booked</span>
+          <span class="pill booked">${wholeDay.pending ? "Booking…" : "Booked"}</span>
           <div class="desk-occupant">
-            <span class="who">${escapeHtml(match.Name || "?")}</span>
-            <span class="when">${escapeHtml(match.When || "")}</span>
+            <span class="who">${escapeHtml(wholeDay.name)}</span>
+            <span class="when">Whole day</span>
           </div>
         `;
-      } else if (pendingMatch) {
-        card.classList.add("booked", "pending");
-        card.innerHTML = `
-          <span class="desk-label">${desk.label}</span>
-          <span class="pill booked">Booking…</span>
-          <div class="desk-occupant">
-            <span class="who">${escapeHtml(pendingMatch.name)}</span>
-            <span class="when">${escapeHtml(pendingMatch.when)}</span>
-          </div>
-        `;
-      } else {
+      } else if (!morning && !afternoon) {
         card.classList.add("free");
         card.innerHTML = `
           <span class="desk-label">${desk.label}</span>
           <span class="pill free">Free</span>
           <button class="book-btn" data-desk="${desk.id}" data-label="${desk.label}">Book</button>
+        `;
+      } else {
+        // Exactly one half taken — split the card so the other half stays
+        // independently bookable.
+        card.classList.add("split");
+        card.innerHTML = `
+          <span class="desk-label">${desk.label}</span>
+          ${renderHalf(desk, "Morning", morning)}
+          ${renderHalf(desk, "Afternoon", afternoon)}
         `;
       }
       container.appendChild(card);
@@ -276,6 +310,11 @@ function render(rows, forDate) {
 
   document.querySelectorAll(".book-btn").forEach((btn) => {
     btn.addEventListener("click", () => openModal(btn.dataset.desk, btn.dataset.label));
+  });
+  document.querySelectorAll(".mini-book-btn").forEach((btn) => {
+    btn.addEventListener("click", () =>
+      openModalForSlot(btn.dataset.desk, btn.dataset.label, btn.dataset.slot)
+    );
   });
 }
 
@@ -321,26 +360,46 @@ function submitToGoogleForm(fields) {
 
 // ---- modal -----------------------------------------------------------------
 let activeDesk = null;
+let presetWhen = null; // set when booking a single free half of a split desk
 
-function openModal(deskId, deskLabel) {
+function openModalCommon(deskId, deskLabel) {
   activeDesk = deskId;
   const forDateObj = parseIsoLocal(getSelectedDateIso());
   document.getElementById("modalTitle").textContent = `Book ${deskLabel} — ${friendlyDate(forDateObj)}`;
   document.getElementById("nameInput").value = "";
-  document.getElementById("whenInput").value = "";
   document.getElementById("modalError").textContent = "";
   document.getElementById("modalBackdrop").classList.add("open");
   document.getElementById("nameInput").focus();
 }
 
+// Whole desk is free: let the visitor choose Morning / Afternoon / Whole day.
+function openModal(deskId, deskLabel) {
+  presetWhen = null;
+  openModalCommon(deskId, deskLabel);
+  document.getElementById("whenField").hidden = false;
+  document.getElementById("whenInput").value = "";
+  document.getElementById("whenPreset").hidden = true;
+}
+
+// Only one half of the desk is free: skip the choice, lock it to that half.
+function openModalForSlot(deskId, deskLabel, slotName) {
+  presetWhen = slotName;
+  openModalCommon(deskId, deskLabel);
+  document.getElementById("whenField").hidden = true;
+  const presetEl = document.getElementById("whenPreset");
+  presetEl.innerHTML = `When: <strong>${escapeHtml(slotName)}</strong> (the other half of this desk is already booked)`;
+  presetEl.hidden = false;
+}
+
 function closeModal() {
   activeDesk = null;
+  presetWhen = null;
   document.getElementById("modalBackdrop").classList.remove("open");
 }
 
 async function confirmBooking() {
   const name = document.getElementById("nameInput").value.trim();
-  const when = document.getElementById("whenInput").value;
+  const when = presetWhen || document.getElementById("whenInput").value;
   const errEl = document.getElementById("modalError");
 
   if (!name) { errEl.textContent = "Please enter your name."; return; }
