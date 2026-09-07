@@ -1,8 +1,9 @@
 # Planckian Hot Desk Booking
 
-A tiny standalone static site to book hot desks for the **day after** or **day
-after tomorrow** (visitor's choice, weekends skipped). Room A (4 desks, desk 1
-permanently held by Alessio), Room B (4 desks), and 3 overflow "extra" spots.
+A tiny standalone static site to see and book hot desks for **today**, the
+**day after**, or the **day after tomorrow** (visitor's choice, the two
+forward options skip weekends). Room A (4 desks, desk 1 permanently held by
+Alessio), Room B (4 desks), and 3 overflow "extra" spots.
 
 The page is the only thing people interact with. Behind the scenes it uses a
 Google Form as the write path and a published Google Sheet (as CSV) as the read
@@ -56,12 +57,14 @@ person).
 ## Notes / limitations
 
 - **Booking date is a picker, not fixed.** A dropdown at the top lets the
-  visitor choose "day after" or "day after tomorrow" — both computed as
-  *business days* (Saturday/Sunday are skipped entirely), so from a Friday
-  they resolve to Monday and Tuesday. Computed fresh in the visitor's
+  visitor choose **today**, **day after**, or **day after tomorrow**. "Today"
+  is the plain current date (so you can see who's actually in the office
+  right now); the two forward options are *business days* (Saturday/Sunday
+  skipped entirely), so from a Friday they resolve to Monday and Tuesday.
+  Defaults to "day after" on first load. Computed fresh in the visitor's
   browser on every load/refresh; no daily reset needed. See
-  `targetDateOptions()` / `addBusinessDays()` in `js/app.js` to change the
-  offsets or add more options.
+  `targetDateOptions()` / `addBusinessDays()` / `DEFAULT_OPTION_LABEL` in
+  `js/app.js` to change the offsets, the default, or add more options.
 - **Alessio's desk (Room A, Desk 1)** is hard-coded in `js/app.js` — it never
   reads from the sheet and can't be booked through the UI. Edit the
   `fixedOccupant` field there if this ever changes.

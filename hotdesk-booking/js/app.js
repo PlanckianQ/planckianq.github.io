@@ -62,15 +62,19 @@ function addBusinessDays(base, n) {
   return d;
 }
 
-// The two selectable booking targets: "day after" and "day after tomorrow",
-// both business-day-aware (weekends skipped).
+// The selectable dates: "today" (who's actually in the office right now),
+// plus the two forward-looking booking targets, business-day-aware
+// (weekends skipped) — so from a Friday, "day after" is Monday.
 function targetDateOptions() {
   const today = new Date();
   return [
+    { label: "today", date: today },
     { label: "day after", date: addBusinessDays(today, 1) },
     { label: "day after tomorrow", date: addBusinessDays(today, 2) },
   ];
 }
+
+const DEFAULT_OPTION_LABEL = "day after"; // which one is pre-selected on first load
 
 function isoDate(d) {
   const y = d.getFullYear();
@@ -435,10 +439,11 @@ function setStatus(msg) {
   document.getElementById("statusMsg").textContent = msg;
 }
 
-// ---- date picker (day after / day after tomorrow) --------------------------
+// ---- date picker (today / day after / day after tomorrow) ------------------
 // Repopulates the <select>, keeping whatever the visitor currently has
-// picked if it's still one of the two valid options (it will be, in almost
-// all cases — options only shift at midnight).
+// picked if it's still one of the valid options (it will be, in almost all
+// cases — options only shift at midnight). On first load (no prior
+// selection), defaults to DEFAULT_OPTION_LABEL rather than "today".
 function populateDateSelect() {
   const sel = document.getElementById("targetDateSelect");
   const prevValue = sel.value;
@@ -449,12 +454,18 @@ function populateDateSelect() {
     const iso = isoDate(opt.date);
     const el = document.createElement("option");
     el.value = iso;
+    el.dataset.label = opt.label;
     el.textContent = `${friendlyDate(opt.date)} (${opt.label})`;
     sel.appendChild(el);
   }
 
   const stillValid = Array.from(sel.options).some((o) => o.value === prevValue);
-  sel.value = stillValid ? prevValue : sel.options[0].value;
+  if (stillValid) {
+    sel.value = prevValue;
+  } else {
+    const defaultOpt = Array.from(sel.options).find((o) => o.dataset.label === DEFAULT_OPTION_LABEL);
+    sel.value = (defaultOpt || sel.options[0]).value;
+  }
 }
 
 function getSelectedDateIso() {
